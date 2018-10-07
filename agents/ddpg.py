@@ -17,11 +17,11 @@ class DDPGAgent(Agent):
         super().__init__(env, debug)
         self.actor = ActorEstimator(env)
         self.critic = CriticEstimator(env)
-        self.discount = discount
-        self.train_iters = train_iters
-        self.batch_train_iters = batch_train_iters
-        self.batch_size = batch_size
-        self.use_replay_buffer = use_replay_buffer
+        self._discount = discount
+        self._train_iters = train_iters
+        self._batch_train_iters = batch_train_iters
+        self._batch_size = batch_size
+        self._use_replay_buffer = use_replay_buffer
 
     def get_action(self, state, explore_prob=0.):
         action = self.actor.get_action(state, explore_prob)
@@ -30,14 +30,14 @@ class DDPGAgent(Agent):
     def train(self):
         # Policy training loop
         data = []
-        for itr in range(self.train_iters):
+        for itr in range(self._train_iters):
             # Collect trajectory loop
             batch_data = []
             episode_rewards = []
 
             explore_prob = 0.5*(0.9**itr)
             print("Explore prob:", explore_prob)
-            while len(batch_data) < self.batch_size:
+            while len(batch_data) < self._batch_size:
                 state = self.env.reset()
                 done = False
                 # Only render the first trajectory
@@ -54,19 +54,19 @@ class DDPGAgent(Agent):
                         self.env.render()
                 episode_rewards.append(episode_reward)
             data.extend(batch_data)
-            if self.use_replay_buffer:
+            if self._use_replay_buffer:
                 random.shuffle(data)
-            self._train_batch(data[-self.batch_size:])
+            self._train_batch(data[-self._batch_size:])
             print(self.actor.target_estimator.W)
             print(self.critic.target_estimator.W)
             norm = np.linalg.norm(self.actor.estimator.W)
             print("Iter", itr, "Avg rewards:", np.mean(episode_rewards), "Norm:", norm)
 
     def _train_batch(self, data):
-        for i in range(self.batch_train_iters):
+        for i in range(self._batch_train_iters):
             for state, action, reward, next_state in data:
                 predicted_next_action = self.actor.get_action(next_state)
-                target = reward + self.discount * self.critic.evaluate(next_state, predicted_next_action)
+                target = reward + self._discount * self.critic.evaluate(next_state, predicted_next_action)
                 action_grad = -self.critic.action_grad(action)
                 self.actor.estimator.fit_to_delta(
                     state, action_grad)

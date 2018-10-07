@@ -11,9 +11,12 @@ class Agent:
 
 
 from .ddpg import *
+from .policy_gradient import *
 
 
 def get_agent_class(agent_id):
     if agent_id == 'DDPG':
         return DDPGAgent
+    elif agent_id == 'PolicyGradient':
+        return PolicyGradientAgent
     raise ValueError("Unsupported agent")
