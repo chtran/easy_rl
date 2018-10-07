@@ -93,6 +93,6 @@ class PointEnv(Env):
 
 register(
     'Point-v0',
-    entry_point='simplepg.point_env:PointEnv',
+    entry_point='environments.point_env:PointEnv',
     timestep_limit=40,
 )

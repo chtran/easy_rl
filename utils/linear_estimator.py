@@ -1,3 +1,5 @@
+import numpy as np
+
 class LinearEstimator(object):
     def __init__(self, 
             n_in, n_out, 
