@@ -12,6 +12,7 @@ class Agent:
 
 from .ddpg import *
 from .policy_gradient import *
+from .dqn import *
 
 
 def get_agent_class(agent_id):
@@ -19,4 +20,6 @@ def get_agent_class(agent_id):
         return DDPGAgent
     elif agent_id == 'PolicyGradient':
         return PolicyGradientAgent
+    elif agent_id == 'DQN':
+        return DeepQLearningAgent
     raise ValueError("Unsupported agent")
