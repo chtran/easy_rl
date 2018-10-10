@@ -78,6 +78,8 @@ class DDPGAgent(Agent):
 
 class ActorEstimator(object):
     def __init__(self, env, soft_update_weight=0.9):
+        action_space = env.action_space.shape[0] # |A|
+        obs_space = env.observation_space.shape[0] # |S|
         self.estimator = LinearEstimator(obs_space, action_space)
         self.target_estimator = LinearEstimator(
             obs_space, action_space, W=self.estimator.W)
@@ -93,19 +95,19 @@ class ActorEstimator(object):
         """Return dim: |A|"""
         add_noise = random.random() < explore_prob
         action = self.target_estimator.predict(state, add_noise)
-        action = np.clip(action, self.action_lb, self.action_ub)
+        action = np.clip(action, self._action_lb, self._action_ub)
         return action
     
 
 class CriticEstimator(object):
     def __init__(self, env, soft_update_weight=0.9):
-        self.estimator = LinearEstimator(self.obs_space + self.action_space, 1)
-        self.target_estimator = LinearEstimator(
-            self.obs_space + self.action_space, 1, W=self.estimator.W)
-
-        self._soft_update_weight = soft_update_weight
         self._action_space = env.action_space.shape[0] # |A|
         self._obs_space = env.observation_space.shape[0] # |S|
+        self.estimator = LinearEstimator(self._obs_space + self._action_space, 1)
+        self.target_estimator = LinearEstimator(
+            self._obs_space + self._action_space, 1, W=self.estimator.W)
+
+        self._soft_update_weight = soft_update_weight
 
     def soft_update(self):
         self.target_estimator.W += self._soft_update_weight * (self.estimator.W - self.target_estimator.W)
