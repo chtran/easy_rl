@@ -5,32 +5,33 @@ import click
 import random
 
 from utils.gaussian_estimator import GaussianEstimator
+from utils.linear_estimator import LinearEstimator
 from agents import Agent
 
 
-Observation = namedtuple('Observation', ['state', 'action', 'value'])
+Observation = namedtuple('Observation', ['state', 'action', 'value', 'baseline'])
 
 class PolicyGradientAgent(Agent):
     def __init__(self, 
             env, debug,
-            discount=0.99, train_iters=20, 
+            discount=0.99, train_iters=100, 
             learning_rate=0.1,
             num_rollout_episodes=50):
         super().__init__(env, debug)
         action_space = env.action_space.shape[0] # |A|
         obs_space = env.observation_space.shape[0] # |S|
-        self.estimator = GaussianEstimator(obs_space, action_space)
+        self.action_estimator = GaussianEstimator(obs_space, action_space)
+        self.state_estimator = LinearEstimator(obs_space, 1)
         self._discount = discount
         self._train_iters = train_iters
         self._learning_rate = learning_rate
         self._num_rollout_episodes = num_rollout_episodes
 
     def get_action(self, state, explore_prob=0.):
-        action = self.estimator.get_sample(state)
+        action = self.action_estimator.get_sample(state)
         return action
 
     def train(self):
-        print(self.debug)
         for itr in range(self._train_iters):
             batch_data = []
             episode_rewards = []
@@ -56,15 +57,25 @@ class PolicyGradientAgent(Agent):
     def _process_episode_data(self, episode_data):
         ret = []
         next_value = 0
+        #print("Begin episode")
         for state, action, reward in episode_data[::-1]:
             value = reward + self._discount * next_value
-            ret.append(Observation(state=state, action=action, value=value))
+            baseline = self.state_estimator.predict(np.square(state))
+            #print(state, value)
+            ret.append(Observation(state=state, action=action, value=value, baseline=baseline))
             next_value = value 
+        #print("End episode")
         return ret
 
     def _train_batch(self, batch_data):
-        grad = np.zeros_like(self.estimator.W)
+        # Fit actor
+        action_grad = np.zeros_like(self.action_estimator.W)
         for obs in batch_data:
-            grad += self.estimator.get_grad_log_prob(obs.state, obs.action) * obs.value
-        grad = grad / (np.linalg.norm(grad) + 1e-8)
-        self.estimator.W += self._learning_rate * grad
+            action_grad += \
+                self.action_estimator.get_grad_log_prob(obs.state, obs.action) * (obs.value -obs.baseline)
+        action_grad = action_grad / (np.linalg.norm(action_grad) + 1e-8)
+        self.action_estimator.W += self._learning_rate * action_grad
+
+        # Fit critic
+        for obs in batch_data:
+            self.state_estimator.fit(np.square(obs.state), obs.value)
