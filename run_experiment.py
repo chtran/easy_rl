@@ -5,6 +5,7 @@ import numpy as np
 import gym
 import click
 import random
+import tensorflow as tf
 
 import agents
 
@@ -17,16 +18,15 @@ import agents
 def main(env_id, agent_id, n_test_episodes, render, debug):
     rng = np.random.RandomState(42)
 
-    if env_id == 'MountainCarContinuous-v0':
-        env = gym.make('MountainCarContinuous-v0')
-    elif env_id == 'Point-v0':
+    if env_id == 'Point-v0':
         from environments import point_env
         env = gym.make('Point-v0')
     else:
-        raise ValueError(
-            "Unsupported environment: must be one of 'MountainCarContinuous-v0', 'Point-v0'")
+        env = gym.make('MountainCarContinuous-v0')
 
     env.seed(42)
+    tf.set_random_seed(42)
+    np.random.seed(42)
     agent_class = agents.get_agent_class(agent_id)
     agent = agent_class(env, debug)
     agent.train()
